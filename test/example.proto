@@ -5,4 +5,16 @@ package example;
 message Person {
     optional string name = 1;
     optional uint32 age = 2;
+    optional Address address = 3;
+    repeated int32 score = 4;
+    repeated Friend friends = 5;
+}
+
+message Address {
+    optional string street = 1;
+    optional uint32 number = 2;
+}
+
+message Friend {
+    optional string name = 1;
 }
