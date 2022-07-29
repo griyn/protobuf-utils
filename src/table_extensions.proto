@@ -1,0 +1,9 @@
+syntax="proto2";
+import "google/protobuf/descriptor.proto";
+
+package google.protobuf;
+
+extend FieldOptions {
+    optional bytes column_family = 200001; // cf名字
+    optional bytes describe = 200002; // 字段的中文描述 utf8 编码
+};

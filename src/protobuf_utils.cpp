@@ -141,7 +141,7 @@ ERRTYPE get_message_field(
     }
 
     if (!refl->HasField(message, field_desc)) {
-        return ERRTYPE::FIELD_HAS_SET;
+        return ERRTYPE::FIELD_NOT_SET;
     }
 
     switch (field_desc->cpp_type()) {
@@ -342,6 +342,104 @@ ERRTYPE add_repeated_field(
         if (!refl->AddMessage(message, field_desc)->ParseFromString(value)) {
             return ERRTYPE::PARSE_FAILED;
         }
+        break;
+    }
+
+    default:
+        return ERRTYPE::INERNAL_ERROR;
+    }
+
+    return ERRTYPE::SUCCESS;
+}
+
+ERRTYPE set_default_field(
+        const std::string& field, 
+        google::protobuf::Message* message) {
+    if (message == nullptr) {
+        return ERRTYPE::OUTPUT_IS_NULLPTR;
+    }
+
+    auto* desc = message->GetDescriptor();
+    auto* refl = message->GetReflection();
+
+    static std::string s_token = ".";
+    auto iter = field.find_first_of(s_token);
+    // A.B.C 存在嵌套类型的情况
+    if (iter != std::string::npos) {
+        std::string cur = field.substr(0, iter);
+        std::string oth = field.substr(iter + 1);
+        auto nested_field_desc = desc->FindFieldByName(cur);
+        if (nested_field_desc == nullptr) {
+            return ERRTYPE::FIELD_NOT_FOUND;
+        }
+        if (nested_field_desc->is_repeated()) {
+            return ERRTYPE::FIELD_FROM_REPEATED;
+        }
+        if (nested_field_desc->type() != google::protobuf::FieldDescriptor::Type::TYPE_MESSAGE) {
+            return ERRTYPE::FIELD_NOT_FOUND;
+        }
+
+        auto* nested_message = refl->MutableMessage(message, nested_field_desc);
+        if (nested_message == nullptr) {
+            ERRTYPE::INERNAL_ERROR;
+        }
+
+        return set_default_field(oth, nested_message);
+    }
+
+    // 目标字段
+    auto* field_desc = desc->FindFieldByName(field);
+    if (field_desc == nullptr) {
+        return ERRTYPE::FIELD_NOT_FOUND;
+    }
+
+    // 数组类型
+    if (field_desc->is_repeated()) {
+        switch (field_desc->cpp_type()) {
+#define SET_PROTOBUF(PBTYPE, PBFUNC, VALUE)                         \
+    case ::google::protobuf::FieldDescriptor::CPPTYPE_##PBTYPE: {   \
+        refl->PBFUNC(message, field_desc, VALUE);                   \
+        break;                                                      \
+    }
+
+        SET_PROTOBUF(DOUBLE, AddDouble, 0    );
+        SET_PROTOBUF(FLOAT , AddFloat , 0    );
+        SET_PROTOBUF(INT64 , AddInt64 , 0    );
+        SET_PROTOBUF(UINT64, AddUInt64, 0    );
+        SET_PROTOBUF(INT32 , AddInt32 , 0    );
+        SET_PROTOBUF(UINT32, AddUInt32, 0    );
+        SET_PROTOBUF(BOOL  , AddBool  , false);
+        SET_PROTOBUF(STRING, AddString, ""   );
+        SET_PROTOBUF(ENUM  , AddEnumValue, 0 );
+#undef SET_PROTOBUF
+        case ::google::protobuf::FieldDescriptor::CPPTYPE_MESSAGE: {
+            refl->AddMessage(message, field_desc);
+            break;
+        }
+        }
+        return ERRTYPE::SUCCESS;
+    }
+
+    // 普通类型
+    switch (field_desc->cpp_type()) {
+#define SET_PROTOBUF(PBTYPE, PBFUNC, VALUE)                         \
+    case ::google::protobuf::FieldDescriptor::CPPTYPE_##PBTYPE: {   \
+        refl->PBFUNC(message, field_desc, VALUE);                   \
+        break;                                                      \
+    }
+
+        SET_PROTOBUF(DOUBLE, SetDouble, 0    );
+        SET_PROTOBUF(FLOAT , SetFloat , 0    );
+        SET_PROTOBUF(INT64 , SetInt64 , 0    );
+        SET_PROTOBUF(UINT64, SetUInt64, 0    );
+        SET_PROTOBUF(INT32 , SetInt32 , 0    );
+        SET_PROTOBUF(UINT32, SetUInt32, 0    );
+        SET_PROTOBUF(BOOL  , SetBool  , false);
+        SET_PROTOBUF(STRING, SetString, ""   );
+        SET_PROTOBUF(ENUM  , SetEnumValue, 0 );
+#undef SET_PROTOBUF
+    case ::google::protobuf::FieldDescriptor::CPPTYPE_MESSAGE: {
+        refl->MutableMessage(message, field_desc);
         break;
     }
 

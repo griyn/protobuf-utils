@@ -78,3 +78,19 @@ TEST_F(ProtobufUtilsTest, add_repeated_field) {
 
     std::cout << person.ShortDebugString() << std::endl;
 }
+
+TEST_F(ProtobufUtilsTest, set_default_field) {
+    example::Person person1;
+    EXPECT_EQ(0, ::garden::protobuf_utils::set_default_field("name", &person1));
+    EXPECT_EQ(0, ::garden::protobuf_utils::set_default_field("address.street", &person1));
+    EXPECT_EQ(0, ::garden::protobuf_utils::set_default_field("friends", &person1));
+
+    std::cout << "set_default_field:" << person1.ShortDebugString() << std::endl;
+
+    EXPECT_TRUE(person1.has_name());
+    EXPECT_FALSE(person1.has_age());
+    EXPECT_TRUE(person1.address().has_street());
+    EXPECT_FALSE(person1.address().has_number());
+    EXPECT_TRUE(person1.friends_size() != 0);
+    EXPECT_TRUE(person1.score_size() == 0);
+}

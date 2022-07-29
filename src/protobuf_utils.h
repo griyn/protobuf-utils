@@ -56,5 +56,13 @@ ERRTYPE add_repeated_field(
         const std::string& value, 
         google::protobuf::Message* message);
 
+// 设定默认值
+//  数字类型：0;
+//  字符类型：空串；
+//  数组类型: 添加一个元素
+ERRTYPE set_default_field(
+        const std::string& field, 
+        google::protobuf::Message* message);
+
 } // protobuf_utils
 } // garden
