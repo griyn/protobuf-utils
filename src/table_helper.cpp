@@ -20,14 +20,19 @@ int message_to_kvs(const std::string& rowkey, const std::string& field_path,
         // 嵌套的情况
         if (!field_desc->is_repeated() &&
                 field_desc->cpp_type() == google::protobuf::FieldDescriptor::CPPTYPE_MESSAGE) {
-            int ret = message_to_kvs(rowkey, field_desc->name(), 
-                    refl->GetMessage(message, field_desc), kvs);
+            std::string path = field_path.empty() ? 
+                    field_desc->name() : field_path + "." + field_desc->name();
+            int ret = message_to_kvs(rowkey, path, refl->GetMessage(message, field_desc), kvs);
             if (ret != 0) {
                 return ret;
             }
         } else {
             std::string value{""};
             int ret = protobuf_utils::get_message_field(field_desc->name(), message, &value);
+            if (ret == protobuf_utils::ERRTYPE::FIELD_NOT_SET) {
+                // 跳过未设定的字段
+                continue;
+            }
             if (ret != 0) {
                 return ret;
             }

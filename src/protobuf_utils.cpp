@@ -129,7 +129,7 @@ ERRTYPE get_message_field(
 
     if (field_desc->is_repeated()) {
         if (refl->FieldSize(message, field_desc) == 0) {
-            return ERRTYPE::FIELD_HAS_SET;
+            return ERRTYPE::FIELD_NOT_SET;
         }
         std::unique_ptr<google::protobuf::Message> ptr(message.New());
         if (copy_message_field(field, &message, ptr.get())) {
